@@ -148,20 +148,25 @@ export class AppComponent implements OnInit, AfterViewChecked {
   private handleError(error: unknown): void {
     console.error('Error getting response from Gemini:', error); // Log the full error for debugging
 
-    let userMessage = 'Sorry, I encountered a problem and could not complete your request. Please try again later.';
+    let userMessage = 'Sorry, an unexpected error occurred. Please try again later.';
 
     if (error instanceof Error) {
         const errorMessage = error.message.toLowerCase();
-        if (errorMessage.includes('api key not valid')) {
-            userMessage = 'The application\'s API key is invalid. Please contact an administrator.';
+
+        // Prioritize specific, known errors for better user feedback
+        if (errorMessage.includes('api key is not configured')) {
+            userMessage = "The application is not configured correctly to use AI features. Please contact an administrator.";
+        } else if (errorMessage.includes('api key not valid')) {
+            userMessage = "The application's API key is invalid. Please contact an administrator.";
         } else if (errorMessage.includes('429') || errorMessage.includes('resource has been exhausted')) {
-            userMessage = 'I am currently experiencing high demand. Please wait a moment and try again.';
+            userMessage = 'The service is currently experiencing high demand. Please try again in a few moments.';
         } else if (errorMessage.includes('network') || errorMessage.includes('failed to fetch')) {
             userMessage = 'I am having trouble connecting to the network. Please check your internet connection and try again.';
         } else if (errorMessage.includes('candidate was blocked due to safety')) {
             userMessage = 'The response was blocked due to safety settings. Please rephrase your request.';
-        } else if (errorMessage.includes('api key is not configured')) {
-            userMessage = 'API key is not configured. Please add your Gemini API key to `src/environments/environment.ts` to enable AI features.';
+        } else if (errorMessage.includes('google') || errorMessage.includes('gemini')) {
+            // A more generic API error message if it's from Google but not one of the above
+            userMessage = 'An error occurred while communicating with the AI service. Please try again.';
         }
     }
     
