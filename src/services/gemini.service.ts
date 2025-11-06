@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { GoogleGenAI } from '@google/genai';
-import { environment } from '../environments/environment';
 import { Restaurant } from '../models/restaurant.model';
 import { ChatMessage } from '../models/chat.model';
+
+declare const process: any;
 
 @Injectable({
   providedIn: 'root'
@@ -12,11 +13,14 @@ export class GeminiService {
   private apiKeyInvalid = false;
 
   constructor() {
-    // The API key is loaded from the environment file for development.
-    const apiKey = environment.apiKey;
+    let apiKey: string | undefined;
+    // Safely check for process and process.env to avoid crashing in browser environments
+    if (typeof process !== 'undefined' && process.env) {
+      apiKey = process.env.API_KEY;
+    }
 
-    if (!apiKey || apiKey === 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
-      console.error("Gemini API key not found or is a placeholder in `src/environments/environment.ts`. Please add it to enable AI features.");
+    if (!apiKey) {
+      console.error("Gemini API key is not configured in the environment. Please set the secure `API_KEY` environment variable.");
       this.apiKeyInvalid = true;
     } else {
       this.ai = new GoogleGenAI({ apiKey });
@@ -75,7 +79,7 @@ Structure of each card (Use this Markdown template EXACTLY):
 **Ključna recenzija:**
 > [Here goes a quote from a Google/TripAdvisor review found with your search tool. If no review is available, write: *Nema dostupnih recenzija.*]
 
-[Prikaži na karti](MAP_URL) | **[Zatraži rezervaciju](${'[bookingLink]'})**
+[Prikaži na karti](MAP_URL) | **[Zatraži rezervaciju]([bookingLink])**
 
 ---
 
@@ -97,11 +101,9 @@ Begin the interaction based on the user's last message. Adhere strictly to the f
     language: string
   ) {
     if (this.apiKeyInvalid || !this.ai) {
-      async function* errorStream() {
-        // This message is caught by the component's error handler.
-        yield { text: 'API key is not configured.' };
-      }
-      return errorStream();
+      // Throw an error that will be caught by the component's try/catch block.
+      // This unifies the error handling logic.
+      throw new Error('API key is not configured.');
     }
 
     const model = 'gemini-2.5-flash';

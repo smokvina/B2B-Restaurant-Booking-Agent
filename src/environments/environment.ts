@@ -1,6 +1,5 @@
-// The API key should NOT be stored here in a production environment.
-// For development, you can add your Gemini API key here.
+// The API key must be provided via the `process.env.API_KEY` environment variable.
+// Do NOT store the API key in this file.
 export const environment = {
   production: false,
-  apiKey: 'PASTE_YOUR_GEMINI_API_KEY_HERE',
 };

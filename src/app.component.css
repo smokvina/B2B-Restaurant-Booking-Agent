@@ -1,4 +1,3 @@
-
 /* Custom styles for chat bubbles */
 .prose br {
   display: block;
@@ -26,4 +25,43 @@
 
 .animate-pulse {
   animation: pulse 1.4s infinite ease-in-out;
+}
+
+/* --- Professional Print Styles for A4 Report --- */
+@media print {
+  body {
+    background-color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Target the print-only section and ensure its prose content is black */
+  .print-section .prose {
+    color: black !important;
+     --tw-prose-body: black;
+     --tw-prose-bold: black;
+     --tw-prose-headings: black;
+     --tw-prose-links: #007BFF;
+  }
+
+  .print-section .prose a {
+      color: #007BFF !important;
+      text-decoration: underline !important;
+  }
+
+  /* Wrap each restaurant card and force a page break after it */
+  .print-section .restaurant-card {
+    page-break-after: always;
+    page-break-inside: avoid; /* Try to keep the card content together */
+  }
+
+  /* Hide the visual separator line in the print view, since the page break handles separation */
+  .print-section .restaurant-card hr {
+    display: none;
+  }
+  
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
 }
