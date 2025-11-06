@@ -206,9 +206,22 @@ export class AppComponent implements OnInit, AfterViewChecked {
       '<a href="$2" target="_blank" class="inline-block bg-[#007BFF] text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 mt-2 dark:bg-[#4D9FFF] dark:hover:bg-blue-500">$1</a>'
     );
 
-    // Linkify any raw URLs that may have been returned, avoiding those already in an href attribute.
-    const urlRegex = /(?<!href="|href=)(https?:\/\/[^\s<]+)/g;
-    htmlContent = htmlContent.replace(urlRegex, '<a href="$1" target="_blank" class="text-[#007BFF] hover:underline dark:text-[#4D9FFF]">$1</a>');
+    // Linkify raw URLs without using negative lookbehind for wider browser compatibility.
+    // This regex captures either an existing href attribute's value or a raw URL.
+    const urlRegex = /(href="https?:\/\/[^\s"]+")|(https?:\/\/[^\s<]+)/g;
+    htmlContent = htmlContent.replace(urlRegex, (match, inHref, rawUrl) => {
+      // If the URL is already inside an href attribute (inHref group matched), return the match as is.
+      if (inHref) {
+        return match;
+      }
+      // If it's a raw URL (rawUrl group matched), wrap it in an <a> tag.
+      if (rawUrl) {
+        return `<a href="${rawUrl}" target="_blank" class="text-[#007BFF] hover:underline dark:text-[#4D9FFF]">${rawUrl}</a>`;
+      }
+      // Fallback, should not be reached with this regex.
+      return match;
+    });
+
 
     return this.sanitizer.bypassSecurityTrustHtml(htmlContent);
   }
