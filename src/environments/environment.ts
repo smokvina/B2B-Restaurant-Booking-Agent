@@ -1,8 +1,5 @@
-
-// This is a placeholder for environment variables.
-// In a real application, process.env.API_KEY would be populated
-// by the build/deployment environment.
-
+// The API key should NOT be stored here.
+// It MUST be provided via the `process.env.API_KEY` environment variable.
 export const environment = {
   production: false,
 };

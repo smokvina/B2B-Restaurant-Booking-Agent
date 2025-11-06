@@ -1569,7 +1569,17 @@ export class RestaurantDataService {
     }
   ];
 
-  constructor() { }
+  constructor() {
+    this.restaurants = this.restaurants.map(restaurant => {
+      if (restaurant.bookingLink && restaurant.bookingLink.startsWith('www.')) {
+        return {
+          ...restaurant,
+          bookingLink: `https://${restaurant.bookingLink}`
+        };
+      }
+      return restaurant;
+    });
+  }
 
   getRestaurants(): Restaurant[] {
     return this.restaurants;

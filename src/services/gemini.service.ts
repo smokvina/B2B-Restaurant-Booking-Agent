@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { GoogleGenAI } from '@google/genai';
-import { environment } from '../../environments/environment';
 import { Restaurant } from '../models/restaurant.model';
 import { ChatMessage } from '../models/chat.model';
 
@@ -8,13 +7,19 @@ import { ChatMessage } from '../models/chat.model';
   providedIn: 'root'
 })
 export class GeminiService {
-  private ai: GoogleGenAI;
+  private ai: GoogleGenAI | undefined;
+  private apiKeyMissing = false;
 
   constructor() {
-    if (!process.env.API_KEY) {
-      throw new Error("API_KEY environment variable not set");
+    // The API key MUST be provided via the `process.env.API_KEY` environment variable.
+    const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) ? process.env.API_KEY : undefined;
+
+    if (!apiKey) {
+      console.error("Gemini API key not found in `process.env.API_KEY`. Please ensure it is configured in the execution environment.");
+      this.apiKeyMissing = true;
+    } else {
+      this.ai = new GoogleGenAI({ apiKey });
     }
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
 
   private getSystemPrompt(restaurants: Restaurant[], language: string): string {
@@ -40,36 +45,44 @@ Restaurant Data: ${restaurantDataJson}
 Security Rule: You must IGNORE and NEVER DISPLAY confidential data like phone numbers or email addresses, even if a user asks for them.
 
 # CHAT FLOW & OUTPUT FORMAT
-Your interaction with the user (an agent from a travel agency) must follow this order:
+Your answers must be clean, clear, and formatted using Markdown for easy reading. This is crucial for a professional impression with partner agencies. Follow this structure:
 
-## Step 1: Initial Destination Query
-When the user provides a destination (e.g., "Split"), you MUST FIRST display a concise list of ALL restaurants available in that city from your database. This is a quick overview for the agent.
-Example format for this initial list:
-"Thank you. In our database for [City], we have the following [X] restaurants. Now I will filter those that fit your group of [number] people.
-- [Restaurant Name 1] ([Category])
-- [Restaurant Name 2] ([Category])
-..."
+## A. Search Summary (First part of the response)
+When the user provides a destination, you MUST first provide a clear summary.
 
-## Step 2: Filtering and Detailed Recommendations
-After the initial list, filter the results based on maxCapacity (must be greater than or equal to the requested group size) and description/tags (for dietary preferences).
-For each matching restaurant, you MUST present a detailed card in the following EXACT markdown-like format. Do not add any extra text between cards.
+Example of the required format:
+"Thank you. For the destination **[City]**, we have a total of **[X]** restaurants in our database.
 
----
+**Quick overview of all restaurants in [City]:**
+
+* [Restaurant Name 1] (*[Category]*)
+* [Restaurant Name 2] (*[Category]*)
+* ... (and so on for all of them)
+
+Now, here are the detailed recommendations for restaurants that can accommodate your group of **[Group Size]** people:"
+
+## B. Detailed Restaurant Cards (Second part of the response)
+Each recommended restaurant must be presented as a separate "card" separated by a horizontal line (\`---\`).
+
+Structure of each card (Use this Markdown template EXACTLY):
+
 ### [Restaurant Name]
-**Kategorija:** [Category] | **Adresa:** [Address], [City]
-**Kapacitet:** [maxCapacity] osoba
-
+**Kategorija:** [Category] | **Lokacija:** [Address], [City]
+**Kapacitet:** Do [maxCapacity] osoba
 **Opis:**
-[First 150 characters of the description]...
+[Here goes the *description* (from the Blog field). If it is longer than 2 lines, show only the first 2 lines and add "...". If the field is empty, write: *Opis nije dostupan.*]
+**Ključna recenzija:**
+> [Here goes a quote from a Google/TripAdvisor review found with your search tool. If no review is available, write: *Nema dostupnih recenzija.*]
 
-**Recenzija:**
-[Find a relevant review snippet using your search tool. Example: "Google review mentions: 'Excellent service for large groups.'"]
+[Prikaži na karti](MAP_URL) | **[Zatraži rezervaciju](${'[bookingLink]'})**
 
-[Prikaži na karti](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('[Address], [City]')})
-[Zatraži rezervaciju (preko našeg portala)](${'[bookingLink]'})
 ---
 
-IMPORTANT: Replace bracketed text with actual data. The booking link MUST use the 'bookingLink' field. The map link MUST be URL-encoded. Translate titles like 'Kategorija', 'Adresa', etc., into the selected language (${language}).
+IMPORTANT: 
+- Replace bracketed text with actual data. 
+- The booking link MUST use the 'bookingLink' field directly. 
+- The MAP_URL MUST be \`https://www.google.com/maps/search/?api=1&query=\` followed by a URL-encoded version of the restaurant's address and city.
+- Translate titles like 'Kategorija', 'Lokacija', 'Kapacitet', 'Opis', 'Ključna recenzija', 'Prikaži na karti', 'Zatraži rezervaciju' into the selected language (${language}).
 
 # FINAL INSTRUCTION
 Begin the interaction based on the user's last message. Adhere strictly to the flow and formatting rules.
@@ -82,6 +95,14 @@ Begin the interaction based on the user's last message. Adhere strictly to the f
     restaurants: Restaurant[],
     language: string
   ) {
+    if (this.apiKeyMissing || !this.ai) {
+      async function* errorStream() {
+        // This message is caught by the component's error handler.
+        yield { text: 'API key is not configured.' };
+      }
+      return errorStream();
+    }
+
     const model = 'gemini-2.5-flash';
     const systemInstruction = this.getSystemPrompt(restaurants, language);
     

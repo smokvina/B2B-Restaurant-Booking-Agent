@@ -1,10 +1,14 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>B2B Restaurant Booking Agent</title>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
 <script type="importmap">
 {
@@ -21,13 +25,12 @@
     "@angular/core": "https://next.esm.sh/@angular/core@^20.3.10?external=rxjs",
     "@angular/common": "https://next.esm.sh/@angular/common@^20.3.10?external=rxjs",
     "@angular/common/http": "https://next.esm.sh/@angular/common@^20.3.10/http?external=rxjs",
-    "zone.js": "https://next.esm.sh/zone.js@^0.15.1?external=rxjs",
     "@angular/forms": "https://next.esm.sh/@angular/forms@^20.3.10?external=rxjs"
   }
 }
 </script>
 </head>
-<body class="bg-gray-100">
+<body class="bg-[#F8F9FA] dark:bg-[#121212] transition-colors duration-300">
   <app-root></app-root>
 </body>
 </html>
