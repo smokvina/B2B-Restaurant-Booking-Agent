@@ -1,0 +1,68 @@
+
+<div class="flex flex-col h-screen max-w-4xl mx-auto bg-white shadow-2xl rounded-lg overflow-hidden">
+  <!-- Header -->
+  <header class="bg-gray-800 text-white p-4 flex items-center shadow-md">
+    <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mr-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2V4a2 2 0 012-2h8z" />
+      </svg>
+    </div>
+    <div>
+      <h1 class="text-xl font-bold">B2B Rezervacijski Agent</h1>
+      <p class="text-sm text-gray-300">Vaš partner za grupne rezervacije</p>
+    </div>
+  </header>
+
+  <!-- Chat Messages -->
+  <main #chatContainer class="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
+    @for (message of messages(); track $index) {
+      <div [class]="'flex ' + (message.role === 'user' ? 'justify-end' : 'justify-start')">
+        <div [class]="'max-w-lg p-4 rounded-2xl shadow ' + (message.role === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-white text-gray-800 rounded-bl-none border border-gray-200')">
+          @if (message.role === 'assistant' && !message.content && isLoading()) {
+            <div class="flex items-center space-x-2">
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:0.2s]"></div>
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:0.4s]"></div>
+            </div>
+          } @else {
+            <div class="prose prose-sm max-w-none" [innerHTML]="parseAndSanitize(message.content)"></div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Language Selection Buttons -->
+    @if (chatState() === 'language-select') {
+      <div class="flex justify-center space-x-2 p-4">
+        <button (click)="selectLanguage('Hrvatski')" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">Hrvatski</button>
+        <button (click)="selectLanguage('English')" class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition">English</button>
+        <button (click)="selectLanguage('German')" class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition">German</button>
+        <button (click)="selectLanguage('Italian')" class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition">Italian</button>
+      </div>
+    }
+  </main>
+
+  <!-- Input Form -->
+  <footer class="p-4 bg-white border-t border-gray-200">
+    <form (ngSubmit)="sendMessage()" class="flex items-center space-x-3">
+      <input
+        type="text"
+        [(ngModel)]="userInput"
+        name="userInput"
+        placeholder="Unesite destinaciju, broj osoba..."
+        [disabled]="isLoading() || chatState() === 'language-select'"
+        class="flex-1 p-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+        autocomplete="off"
+      />
+      <button
+        type="submit"
+        [disabled]="isLoading() || !userInput().trim() || chatState() === 'language-select'"
+        class="bg-blue-600 text-white rounded-full p-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+      </button>
+    </form>
+  </footer>
+</div>

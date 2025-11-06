@@ -1,0 +1,29 @@
+
+/* Custom styles for chat bubbles */
+.prose br {
+  display: block;
+  content: "";
+  margin-top: 0.5em;
+}
+
+.prose strong {
+    font-weight: 600;
+}
+
+.prose p {
+    margin: 0.5em 0;
+}
+
+/* For the typing indicator animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 1.4s infinite ease-in-out;
+}

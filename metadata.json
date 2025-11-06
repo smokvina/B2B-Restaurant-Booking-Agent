@@ -1,0 +1,5 @@
+{
+  "name": "B2B Restaurant Booking Agent",
+  "description": "An AI-powered chat assistant to help travel agencies find and book restaurants for large groups in Croatia. The agent provides filtered recommendations based on destination, group size, and dietary needs.",
+  "requestFramePermissions": []
+}
