@@ -161,7 +161,7 @@ export class AppComponent implements OnInit, AfterViewChecked {
         } else if (errorMessage.includes('candidate was blocked due to safety')) {
             userMessage = 'The response was blocked due to safety settings. Please rephrase your request.';
         } else if (errorMessage.includes('api key is not configured')) {
-            userMessage = 'The AI features are not configured for this application. Please contact an administrator.';
+            userMessage = 'API key is not configured. Please add your Gemini API key to `src/environments/environment.ts` to enable AI features.';
         }
     }
     
@@ -189,52 +189,78 @@ export class AppComponent implements OnInit, AfterViewChecked {
   }
 
   parseAndSanitize(content: string): SafeHtml {
-    let htmlContent = this.sanitizer.sanitize(SecurityContext.HTML, content) || '';
+    // Sanitize the raw content to prevent XSS attacks.
+    let processedContent = this.sanitizer.sanitize(SecurityContext.HTML, content) || '';
 
-    // Convert newlines to breaks first
-    htmlContent = htmlContent.replace(/\n/g, '<br>');
-
-    // Handle basic Markdown elements
-    htmlContent = htmlContent.replace(/^\s*### (.*$)/gim, '<h3 class="text-xl font-bold mt-4 mb-2">$1</h3>');
-    htmlContent = htmlContent.replace(/^\s*---/gm, '<hr class="my-6 border-gray-200 dark:border-gray-700">');
-    htmlContent = htmlContent.replace(/^\s*>\s?(.*$)/gim, '<blockquote class="border-l-4 border-gray-300 pl-4 italic my-2 text-gray-600 dark:border-gray-500 dark:text-gray-400">$1</blockquote>');
-    htmlContent = htmlContent.replace(/<br>\s*\*\s/g, '<br>&bull; '); // Replace list markers
-    htmlContent = htmlContent.replace(/^\s*\*\s/g, '&bull; '); // Handle first list item
+    // --- Block-level Markdown Conversion ---
+    // Process content in chunks separated by one or more blank lines.
+    const blocks = processedContent.split(/(\n\s*){2,}/);
     
-    htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
-    htmlContent = htmlContent.replace(/\*(.*?)\*/g, '<i>$1</i>'); // Italic
+    const htmlBlocks = blocks.map(block => {
+      const trimmedBlock = block.trim();
+      if (!trimmedBlock) return '';
 
-    // Handle combined Map and Booking link format
+      // Headers (### Title)
+      if (trimmedBlock.startsWith('### ')) {
+        return `<h3>${trimmedBlock.substring(4)}</h3>`;
+      }
+      // Horizontal Rules (---)
+      if (trimmedBlock === '---') {
+        return '<hr>';
+      }
+      // Blockquotes (> Quote)
+      if (trimmedBlock.startsWith('> ')) {
+        const quoteContent = trimmedBlock.split('\n').map(line => line.replace(/^\s*>\s?/, '')).join('<br>');
+        return `<blockquote>${quoteContent}</blockquote>`;
+      }
+      // Unordered Lists (* Item)
+      if (trimmedBlock.startsWith('* ')) {
+        const listItems = trimmedBlock.split('\n').map(item => 
+          `<li>${item.replace(/^\s*\*\s?/, '')}</li>`
+        ).join('');
+        return `<ul>${listItems}</ul>`;
+      }
+      // Default: Treat as a paragraph. Replace single newlines within the block with <br>.
+      return `<p>${trimmedBlock.replace(/\n/g, '<br>')}</p>`;
+    });
+
+    let htmlContent = htmlBlocks.join('');
+
+    // --- Inline-level Markdown Conversion ---
+
+    // Combined Map and Booking link format
     htmlContent = htmlContent.replace(
       /\[(.*?)\]\((.*?)\)\s*\|\s*\*\*\[(.*?)\]\((.*?)\)\*\*/g,
       (match, mapText, mapUrl, bookText, bookUrl) => {
-        const mapLink = `<a href="${mapUrl}" target="_blank" class="text-[#007BFF] hover:underline dark:text-[#4D9FFF]">${mapText}</a>`;
-        const bookingLink = `<a href="${bookUrl}" target="_blank" class="font-bold text-[#007BFF] hover:underline dark:text-[#4D9FFF]">${bookText}</a>`;
-        
-        return `<div class="mt-4 flex items-center gap-x-4">${mapLink}<span class="text-gray-400 dark:text-gray-500">|</span>${bookingLink}</div>`;
+        const mapLink = `<a href="${mapUrl}" target="_blank">${mapText}</a>`;
+        const bookingLink = `<a href="${bookUrl}" target="_blank"><strong>${bookText}</strong></a>`;
+        // Add 'not-prose' to prevent typography styles from breaking the flex layout
+        return `<div class="mt-4 not-prose flex items-center gap-x-4">${mapLink}<span class="text-gray-400 dark:text-gray-500">|</span>${bookingLink}</div>`;
       }
     );
-    
-    // Fallback for single booking link in case the model provides it
-    htmlContent = htmlContent.replace(
-      /\*\*\[(Zatraži rezervaciju|Request booking)\]\((.*?)\)\*\*/g,
-      '<a href="$2" target="_blank" class="inline-block bg-[#007BFF] text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 mt-2 dark:bg-[#4D9FFF] dark:hover:bg-blue-500">$1</a>'
-    );
-    
-    // Wrap each restaurant section (from an H3 to the next H3 or end of string) in a div for print styling
-    // This is more robust than splitting by <hr>
-    htmlContent = htmlContent.replace(/(<h3[\s\S]*?)(?=<h3|$)/g, '<div class="restaurant-card">$1</div>');
 
-
-    // Linkify raw URLs
+    // Bold (**text**)
+    htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic (*text*)
+    htmlContent = htmlContent.replace(/\*(.*?)\*/g, '<i>$1</i>');
+    
+    // Linkify any raw URLs that are not already part of an <a> tag
     const urlRegex = /(href="https?:\/\/[^\s"]+")|(https?:\/\/[^\s<]+)/g;
     htmlContent = htmlContent.replace(urlRegex, (match, inHref, rawUrl) => {
-      if (inHref) return match;
-      if (rawUrl) return `<a href="${rawUrl}" target="_blank" class="text-[#007BFF] hover:underline dark:text-[#4D9FFF]">${rawUrl}</a>`;
+      if (inHref) {
+        return match; // It's already part of an <a> tag attribute, leave it alone.
+      }
+      if (rawUrl) {
+        // Apply link colors manually as this might be outside the `prose` scope
+        return `<a href="${rawUrl}" target="_blank" class="text-[#007BFF] dark:text-[#4D9FFF] hover:underline">${rawUrl}</a>`;
+      }
       return match;
     });
 
+    // Wrap each generated restaurant section in a div for print styling
+    htmlContent = htmlContent.replace(/(<h3>[\s\S]*?)(?=<h3>|$)/g, '<div class="restaurant-card">$1</div>');
 
+    // Trust the final, sanitized, and formatted HTML
     return this.sanitizer.bypassSecurityTrustHtml(htmlContent);
   }
 
