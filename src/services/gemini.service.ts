@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { GoogleGenAI } from '@google/genai';
+import { environment } from '../environments/environment';
 import { Restaurant } from '../models/restaurant.model';
 import { ChatMessage } from '../models/chat.model';
 
@@ -8,15 +9,15 @@ import { ChatMessage } from '../models/chat.model';
 })
 export class GeminiService {
   private ai: GoogleGenAI | undefined;
-  private apiKeyMissing = false;
+  private apiKeyInvalid = false;
 
   constructor() {
-    // The API key MUST be provided via the `process.env.API_KEY` environment variable.
-    const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) ? process.env.API_KEY : undefined;
+    // The API key is loaded from the environment file for development.
+    const apiKey = environment.apiKey;
 
-    if (!apiKey) {
-      console.error("Gemini API key not found in `process.env.API_KEY`. Please ensure it is configured in the execution environment.");
-      this.apiKeyMissing = true;
+    if (!apiKey || apiKey === 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
+      console.error("Gemini API key not found or is a placeholder in `src/environments/environment.ts`. Please add it to enable AI features.");
+      this.apiKeyInvalid = true;
     } else {
       this.ai = new GoogleGenAI({ apiKey });
     }
@@ -95,7 +96,7 @@ Begin the interaction based on the user's last message. Adhere strictly to the f
     restaurants: Restaurant[],
     language: string
   ) {
-    if (this.apiKeyMissing || !this.ai) {
+    if (this.apiKeyInvalid || !this.ai) {
       async function* errorStream() {
         // This message is caught by the component's error handler.
         yield { text: 'API key is not configured.' };

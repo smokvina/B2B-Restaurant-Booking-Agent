@@ -160,7 +160,7 @@ export class AppComponent implements OnInit, AfterViewChecked {
         } else if (errorMessage.includes('candidate was blocked due to safety')) {
             userMessage = 'The response was blocked due to safety settings. Please rephrase your request.';
         } else if (errorMessage.includes('api key is not configured')) {
-            userMessage = 'The API key has not been configured. Please ask the administrator to set it up.';
+            userMessage = 'API key is not configured. Please add your Gemini API key to `src/environments/environment.ts` to enable AI features.';
         }
     }
     
